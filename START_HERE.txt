@@ -1,0 +1,100 @@
+╔══════════════════════════════════════════════════════════════╗
+║                                                              ║
+║              MARKET ANALYZER - START HERE                    ║
+║                                                              ║
+╚══════════════════════════════════════════════════════════════╝
+
+
+🎯 QUICKEST WAY TO RUN:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+    python app.py
+
+   Then click "Analyze Asset" in the window that opens!
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+
+📚 WANT MORE INFO?
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  New User?          → Read: GUI_GUIDE.md
+  Need Help?         → Read: RUN_APP.md
+  All Options?       → Read: APP_OPTIONS.md
+  Full Details?      → Read: README.md
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+
+🚀 ALTERNATIVE WAYS TO RUN:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Linux/Mac:    ./run_app.sh
+  Windows:      Double-click run_app.bat
+  Terminal:     python analyze.py
+  Example:      python example.py
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+
+⚙️  FIRST TIME SETUP:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  1. Install dependencies:
+     pip install -r requirements.txt
+
+  2. Run the app:
+     python app.py
+
+  That's it!
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+
+❓ TROUBLESHOOTING:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Problem: "python: command not found"
+  Fix:     Try: python3 app.py
+
+  Problem: "No module named 'yfinance'"
+  Fix:     Run: pip install -r requirements.txt
+
+  Problem: GUI won't open
+  Fix:     Try the CLI instead: python analyze.py
+
+  More help? See: RUN_APP.md
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+
+✨ WHAT THIS TOOL DOES:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  ✓ Analyzes stocks (AAPL, MSFT, GOOGL, etc.)
+  ✓ Analyzes crypto (BTC-USD, ETH-USD, etc.)
+  ✓ Shows technical indicators
+  ✓ Provides buy/sell/hold recommendations
+  ✓ Compares multiple assets
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+
+⚠️  IMPORTANT:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  This tool is FOR INFORMATION ONLY.
+  It does NOT trade or move money.
+  Always do your own research!
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+
+🎉 READY? RUN THIS:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+    python app.py
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Have fun analyzing! 📊

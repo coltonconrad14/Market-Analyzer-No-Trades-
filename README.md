@@ -2,6 +2,8 @@
 
 A comprehensive market analysis tool that identifies trends in different financial markets using technical analysis. This analyzer provides predictions based on probability and likelihood for stocks and cryptocurrencies **without any trading functionality** - it's purely for information and prediction purposes.
 
+**🚀 NEW: Easy-to-use GUI Application!** Run `python app.py` for a simple point-and-click interface. See [APP_OPTIONS.md](APP_OPTIONS.md) for all the ways to use this tool.
+
 ## Features
 
 ### Technical Analysis Indicators
@@ -47,7 +49,30 @@ pip install -r requirements.txt
 
 ## Usage
 
-### Quick Start - Run Example
+### 🖥️ GUI Application (Easiest Method)
+
+Launch the easy-to-use graphical interface:
+
+```bash
+python app.py
+```
+
+The GUI provides:
+- **Simple Input Form**: Enter symbol, select period and asset type
+- **Quick Examples**: Pre-loaded buttons for popular stocks and crypto
+- **Real-time Analysis**: View results in formatted display
+- **Asset Comparison**: Compare multiple assets side-by-side
+- **User-Friendly**: No command-line knowledge required!
+
+### 💻 Interactive CLI
+
+Use the command-line interface for quick analysis:
+
+```bash
+python analyze.py
+```
+
+### 📋 Quick Start - Run Example
 
 Run the example script to see the analyzer in action:
 

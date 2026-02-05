@@ -922,11 +922,12 @@ def main():
             
             mode = st.radio(
                 "Mode",
-                options=["Analyze", "Compare"],
+                options=["Analyze", "Compare", "Market Scan"],
                 horizontal=True,
-                help="Analyze one asset or compare multiple assets"
+                help="Analyze one asset, compare multiple assets, or scan market for opportunities"
             )
             compare_mode = mode == "Compare"
+            market_scan_mode = mode == "Market Scan"
         
         st.divider()
         
@@ -1004,11 +1005,15 @@ def main():
         st.markdown(
             "- Select an asset and time period in the sidebar.\n"
             "- Click **Analyze Asset** to generate charts and AI forecasts.\n"
-            "- Use **Compare** mode to review multiple symbols at once."
+            "- Use **Compare** mode to review multiple symbols at once.\n"
+            "- Use **Market Scan** to find top bullish/bearish opportunities."
         )
     with guide_col2:
         st.info("Tip: Use symbols like AAPL, MSFT or BTC, ETH for crypto.")
-    if compare_mode:
+    
+    if market_scan_mode:
+        show_market_scanner(period)
+    elif compare_mode:
         show_comparison_interface()
     else:
         # Single analysis mode
@@ -1858,6 +1863,207 @@ def display_analysis(analysis, symbol, period, asset_type):
             sys.stdout = old_stdout
             
             st.code(output, language=None)
+
+def show_market_scanner(period):
+    """Show market scanner interface for finding top bullish and bearish opportunities."""
+    
+    st.markdown("## 🔍 Market Scanner")
+    st.markdown("Scan the market for top bullish and bearish opportunities based on technical analysis.")
+    
+    # Scanner configuration
+    col1, col2, col3 = st.columns([2, 1, 1])
+    
+    with col1:
+        watchlist_option = st.radio(
+            "Watchlist",
+            options=["Default (30+ assets)", "Custom List"],
+            horizontal=True,
+            help="Use default market watchlist or enter your own symbols"
+        )
+    
+    with col2:
+        scan_period = st.selectbox(
+            "Scan Period",
+            options=["1d", "5d", "1mo", "3mo", "6mo", "1y"],
+            index=3,  # Default to 3mo
+            key="scan_period",
+            help="Time period for technical analysis"
+        )
+    
+    with col3:
+        top_n = st.number_input(
+            "Top Results",
+            min_value=3,
+            max_value=10,
+            value=5,
+            key="top_n",
+            help="Number of top picks to show"
+        )
+    
+    # Custom watchlist input
+    custom_symbols = None
+    if watchlist_option == "Custom List":
+        st.markdown("### Custom Watchlist")
+        symbols_input = st.text_area(
+            "Enter symbols (comma-separated or one per line)",
+            value="AAPL, MSFT, GOOGL, NVDA, TSLA, BTC-USD, ETH-USD",
+            height=100,
+            help="Enter stock tickers or crypto symbols"
+        )
+        if symbols_input:
+            # Support both comma-separated and newline-separated
+            symbols_input = symbols_input.replace('\n', ',')
+            custom_symbols = [s.strip().upper() for s in symbols_input.split(',') if s.strip()]
+    
+    # Scan button
+    scan_clicked = st.button("🚀 Run Market Scan", type="primary", use_container_width=True, key="run_market_scan_btn")
+    
+    if scan_clicked:
+        scan_symbols = custom_symbols if custom_symbols else None
+        symbol_count = len(custom_symbols) if custom_symbols else "30+"
+        
+        with st.spinner(f"Scanning {symbol_count} assets for opportunities..."):
+            try:
+                scan_results = st.session_state.analyzer.scan_market(
+                    symbols=scan_symbols,
+                    period=scan_period,
+                    top_n=top_n
+                )
+                
+                # Store in session state to persist
+                st.session_state.scan_results = scan_results
+                
+                # Display results
+                display_scan_results(scan_results)
+                
+            except Exception as e:
+                st.error(f"❌ Scan Error: {str(e)}")
+    
+    elif 'scan_results' in st.session_state:
+        # Show previously scanned results
+        st.info("📊 Showing previous scan results")
+        display_scan_results(st.session_state.scan_results)
+    else:
+        # Show instructions
+        st.info("👆 Configure your scan settings and click **Run Market Scan** to find opportunities!")
+        
+        st.markdown("""
+        ### What the Market Scanner Does:
+        
+        - 📊 **Analyzes Multiple Assets**: Scans stocks and crypto simultaneously
+        - 🟢 **Top Bullish Signals**: Identifies best buy opportunities ranked by confidence
+        - 🔴 **Top Bearish Signals**: Identifies sell signals and potential downtrends
+        - 📈 **Market Sentiment**: Shows overall market sentiment distribution
+        - ⚙️ **Customizable**: Choose your own watchlist and time period
+        
+        ### Default Watchlist Includes:
+        - **Tech**: AAPL, MSFT, GOOGL, AMZN, META, NVDA, TSLA, NFLX
+        - **Financial**: JPM, BAC, GS, V, MA
+        - **Healthcare**: JNJ, UNH, PFE, ABBV
+        - **Consumer**: WMT, HD, MCD, NKE, SBUX
+        - **Energy**: XOM, CVX
+        - **Crypto**: BTC-USD, ETH-USD, SOL-USD, ADA-USD
+        """)
+
+
+def display_scan_results(scan_results):
+    """Display formatted market scan results."""
+    
+    summary = scan_results['summary']
+    bullish_df = scan_results['bullish']
+    bearish_df = scan_results['bearish']
+    
+    # Market Summary
+    st.markdown("### 📊 Market Sentiment Overview")
+    
+    sum_col1, sum_col2, sum_col3, sum_col4 = st.columns(4)
+    
+    with sum_col1:
+        st.metric("Total Scanned", summary['total_scanned'])
+    
+    with sum_col2:
+        st.metric("🟢 Bullish", f"{summary['bullish_count']} ({summary['bullish_percentage']}%)")
+    
+    with sum_col3:
+        st.metric("🔴 Bearish", f"{summary['bearish_count']} ({summary['bearish_percentage']}%)")
+    
+    with sum_col4:
+        st.metric("⚪ Neutral", f"{summary['neutral_count']} ({summary['neutral_percentage']}%)")
+    
+    # Visual sentiment bar
+    st.markdown("#### Market Sentiment Distribution")
+    sentiment_data = {
+        'Sentiment': ['Bullish', 'Bearish', 'Neutral'],
+        'Count': [summary['bullish_count'], summary['bearish_count'], summary['neutral_count']],
+        'Percentage': [summary['bullish_percentage'], summary['bearish_percentage'], summary['neutral_percentage']]
+    }
+    
+    import plotly.express as px
+    fig = px.bar(
+        sentiment_data,
+        x='Sentiment',
+        y='Count',
+        color='Sentiment',
+        color_discrete_map={'Bullish': '#26a69a', 'Bearish': '#ef5350', 'Neutral': '#757575'},
+        text='Percentage',
+        title='Market Sentiment Distribution'
+    )
+    fig.update_traces(texttemplate='%{text}%', textposition='outside')
+    fig.update_layout(showlegend=False, height=300)
+    st.plotly_chart(fig, use_container_width=True)
+    
+    # Top Bullish Recommendations
+    st.markdown("### 🟢 Top Bullish Recommendations")
+    
+    if not bullish_df.empty:
+        st.dataframe(
+            bullish_df,
+            use_container_width=True,
+            hide_index=True,
+            height=min(len(bullish_df) * 40 + 40, 400)
+        )
+        
+        # Download button
+        csv_bullish = bullish_df.to_csv(index=False)
+        st.download_button(
+            label="📥 Download Bullish Picks (CSV)",
+            data=csv_bullish,
+            file_name="bullish_recommendations.csv",
+            mime="text/csv",
+            key="download_bullish"
+        )
+    else:
+        st.info("No strong bullish signals found in current market conditions.")
+    
+    # Top Bearish Recommendations
+    st.markdown("### 🔴 Top Bearish Recommendations")
+    
+    if not bearish_df.empty:
+        st.dataframe(
+            bearish_df,
+            use_container_width=True,
+            hide_index=True,
+            height=min(len(bearish_df) * 40 + 40, 400)
+        )
+        
+        # Download button
+        csv_bearish = bearish_df.to_csv(index=False)
+        st.download_button(
+            label="📥 Download Bearish Picks (CSV)",
+            data=csv_bearish,
+            file_name="bearish_recommendations.csv",
+            mime="text/csv",
+            key="download_bearish"
+        )
+    else:
+        st.info("No strong bearish signals found in current market conditions.")
+    
+    # Disclaimer
+    st.warning(
+        "⚠️ **DISCLAIMER**: This analysis is for informational purposes only. "
+        "Always conduct your own research before making investment decisions. "
+        "Past performance does not guarantee future results."
+    )
 
 def show_comparison_interface():
     """Show interface for comparing multiple assets."""

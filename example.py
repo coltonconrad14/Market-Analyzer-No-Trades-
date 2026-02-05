@@ -68,6 +68,30 @@ def main():
     else:
         print("No strong buy recommendations found in current market conditions.")
     
+    # Example 5: Market Scanner - Top Bullish and Bearish
+    print("\n" + "="*60)
+    print("EXAMPLE 5: Market Scanner - Bullish & Bearish Signals")
+    print("="*60)
+    
+    # Scan with default watchlist
+    print("\nUsing default market watchlist (stocks + crypto)...")
+    scan_results = analyzer.scan_market(period='3mo', top_n=5)
+    analyzer.print_market_scan(scan_results)
+    
+    # Alternative: Scan custom list
+    print("\n" + "="*60)
+    print("EXAMPLE 6: Custom Market Scanner")
+    print("="*60)
+    
+    custom_watchlist = [
+        'AAPL', 'MSFT', 'GOOGL', 'AMZN', 'TSLA', 'NVDA',
+        'BTC-USD', 'ETH-USD', 'SOL-USD'
+    ]
+    
+    print(f"\nScanning custom watchlist: {', '.join(custom_watchlist)}")
+    custom_scan = analyzer.scan_market(symbols=custom_watchlist, period='1mo', top_n=3)
+    analyzer.print_market_scan(custom_scan)
+    
     print("\n" + "="*60)
     print("Analysis Complete!")
     print("="*60)

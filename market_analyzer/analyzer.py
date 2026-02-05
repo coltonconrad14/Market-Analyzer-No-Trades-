@@ -240,3 +240,156 @@ class MarketAnalyzer:
         df = df.sort_values('Confidence', ascending=False).head(top_n)
         
         return df
+    
+    def scan_market(self, symbols: Optional[List[str]] = None, period: str = "3mo", 
+                    top_n: int = 5) -> Dict:
+        """
+        Scan the market for top bullish and bearish recommendations.
+        
+        This method analyzes multiple assets and returns ranked lists of:
+        - Top bullish (BUY) recommendations
+        - Top bearish (SELL) recommendations
+        
+        Args:
+            symbols: List of symbols to scan. If None, uses default market watchlist.
+            period: Time period for analysis (default: 3mo)
+            top_n: Number of top recommendations to return for each category (default: 5)
+        
+        Returns:
+            Dictionary containing:
+                - 'bullish': DataFrame of top bullish recommendations
+                - 'bearish': DataFrame of top bearish recommendations
+                - 'summary': Summary statistics of the scan
+        """
+        # Default market watchlist if none provided
+        if symbols is None:
+            symbols = [
+                # Tech stocks
+                'AAPL', 'MSFT', 'GOOGL', 'AMZN', 'META', 'NVDA', 'TSLA', 'NFLX',
+                # Financial
+                'JPM', 'BAC', 'GS', 'V', 'MA',
+                # Healthcare
+                'JNJ', 'UNH', 'PFE', 'ABBV',
+                # Consumer
+                'WMT', 'HD', 'MCD', 'NKE', 'SBUX',
+                # Energy
+                'XOM', 'CVX',
+                # Crypto
+                'BTC-USD', 'ETH-USD', 'SOL-USD', 'ADA-USD'
+            ]
+        
+        print(f"\n{'='*60}")
+        print(f"MARKET SCANNER")
+        print(f"{'='*60}")
+        print(f"\nScanning {len(symbols)} assets for opportunities...")
+        print(f"Period: {period}\n")
+        
+        # Analyze all symbols
+        analyses = self.analyze_multiple_assets(symbols, period)
+        
+        # Categorize recommendations
+        bullish_data = []
+        bearish_data = []
+        neutral_data = []
+        
+        for symbol, analysis in analyses.items():
+            if 'recommendation' in analysis:
+                rec = analysis['recommendation']
+                
+                data_point = {
+                    'Symbol': symbol,
+                    'Price': f"${analysis.get('current_price', 'N/A')}",
+                    'Recommendation': rec['recommendation'],
+                    'Confidence': rec['confidence'],
+                    'Risk': rec['risk_level'],
+                    'Trend': rec['trend'],
+                    'Strength': rec['trend_strength'],
+                    'Buy Prob': rec['probabilities']['buy'],
+                    'Sell Prob': rec['probabilities']['sell']
+                }
+                
+                if rec['recommendation'] == 'BUY':
+                    bullish_data.append(data_point)
+                elif rec['recommendation'] == 'SELL':
+                    bearish_data.append(data_point)
+                else:
+                    neutral_data.append(data_point)
+        
+        # Create DataFrames and sort
+        bullish_df = pd.DataFrame(bullish_data) if bullish_data else pd.DataFrame()
+        bearish_df = pd.DataFrame(bearish_data) if bearish_data else pd.DataFrame()
+        
+        # Sort bullish by confidence and buy probability
+        if not bullish_df.empty:
+            bullish_df = bullish_df.sort_values(
+                ['Confidence', 'Buy Prob'], 
+                ascending=[False, False]
+            ).head(top_n)
+        
+        # Sort bearish by confidence and sell probability
+        if not bearish_df.empty:
+            bearish_df = bearish_df.sort_values(
+                ['Confidence', 'Sell Prob'], 
+                ascending=[False, False]
+            ).head(top_n)
+        
+        # Generate summary statistics
+        summary = {
+            'total_scanned': len(analyses),
+            'bullish_count': len(bullish_data),
+            'bearish_count': len(bearish_data),
+            'neutral_count': len(neutral_data),
+            'bullish_percentage': round(len(bullish_data) / len(analyses) * 100, 1) if analyses else 0,
+            'bearish_percentage': round(len(bearish_data) / len(analyses) * 100, 1) if analyses else 0,
+            'neutral_percentage': round(len(neutral_data) / len(analyses) * 100, 1) if analyses else 0
+        }
+        
+        return {
+            'bullish': bullish_df,
+            'bearish': bearish_df,
+            'summary': summary
+        }
+    
+    def print_market_scan(self, scan_results: Dict) -> None:
+        """
+        Print formatted market scan results.
+        
+        Args:
+            scan_results: Results from scan_market()
+        """
+        summary = scan_results['summary']
+        bullish_df = scan_results['bullish']
+        bearish_df = scan_results['bearish']
+        
+        print(f"\n{'='*60}")
+        print(f"MARKET SCAN SUMMARY")
+        print(f"{'='*60}")
+        print(f"Total Assets Scanned: {summary['total_scanned']}")
+        print(f"\nMarket Sentiment:")
+        print(f"  🟢 Bullish: {summary['bullish_count']} ({summary['bullish_percentage']}%)")
+        print(f"  🔴 Bearish: {summary['bearish_count']} ({summary['bearish_percentage']}%)")
+        print(f"  ⚪ Neutral:  {summary['neutral_count']} ({summary['neutral_percentage']}%)")
+        
+        print(f"\n{'='*60}")
+        print(f"TOP BULLISH RECOMMENDATIONS 🟢")
+        print(f"{'='*60}\n")
+        if not bullish_df.empty:
+            print(bullish_df.to_string(index=False))
+        else:
+            print("No strong bullish signals found in current market conditions.")
+        
+        print(f"\n{'='*60}")
+        print(f"TOP BEARISH RECOMMENDATIONS 🔴")
+        print(f"{'='*60}\n")
+        if not bearish_df.empty:
+            print(bearish_df.to_string(index=False))
+        else:
+            print("No strong bearish signals found in current market conditions.")
+        
+        print(f"\n{'='*60}")
+        print(f"⚠️  DISCLAIMER")
+        print(f"{'='*60}")
+        print("This analysis is for informational purposes only.")
+        print("Always conduct your own research before making investment decisions.")
+        print("Past performance does not guarantee future results.")
+        print(f"{'='*60}\n")

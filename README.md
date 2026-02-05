@@ -30,6 +30,14 @@ A comprehensive market analysis tool that identifies trends in different financi
 - Multi-indicator signal aggregation
 - Comprehensive market analysis reports
 
+### Market Scanner 🆕
+- **Automated Market Scanning**: Analyze 30+ popular stocks and cryptocurrencies
+- **Top Bullish Signals**: Identify best buy opportunities ranked by confidence
+- **Top Bearish Signals**: Identify sell signals and potential downtrends
+- **Market Sentiment**: Overall market sentiment distribution (bullish/bearish/neutral)
+- **Custom Watchlists**: Scan your own list of symbols
+- **Flexible Time Periods**: Scan across different timeframes (1d to 1y)
+
 ### Supported Assets
 - **Stocks**: Any ticker available on Yahoo Finance (e.g., AAPL, MSFT, GOOGL, TSLA)
 - **Cryptocurrencies**: Major cryptocurrencies (e.g., BTC-USD, ETH-USD, ADA-USD)
@@ -72,6 +80,30 @@ Use the command-line interface for quick analysis:
 python analyze.py
 ```
 
+Options:
+1. Analyze individual assets
+2. **Market Scanner** - Scan multiple assets for top bullish/bearish signals
+3. Quit
+
+### 📊 Market Scanner (NEW!)
+
+Quickly scan the market for top bullish and bearish opportunities:
+
+```bash
+# Quick scan with defaults (30+ stocks & crypto)
+python scan_market.py
+
+# Custom scan with your own parameters
+python scan_market.py --custom
+```
+
+The market scanner:
+- Analyzes 30+ popular stocks and cryptocurrencies
+- Returns top bullish (BUY) and bearish (SELL) recommendations
+- Ranks by confidence and probability scores  
+- Shows market sentiment distribution
+- Customizable time periods and watchlists
+
 ### 📋 Quick Start - Run Example
 
 Run the example script to see the analyzer in action:
@@ -85,6 +117,8 @@ This will demonstrate:
 2. Cryptocurrency analysis (Bitcoin - BTC)
 3. Comparison of multiple assets
 4. Top buy recommendations from a portfolio
+5. **Market Scanner** - Top bullish and bearish signals
+6. Custom watchlist scanning
 
 ### Basic Usage
 
@@ -129,6 +163,30 @@ analyzer = MarketAnalyzer()
 portfolio = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'TSLA', 'BTC-USD', 'ETH-USD']
 top_buys = analyzer.get_top_recommendations(portfolio, top_n=5, recommendation_type='BUY')
 print(top_buys)
+```
+
+#### Scan Market for Opportunities
+
+```python
+from market_analyzer import MarketAnalyzer
+
+analyzer = MarketAnalyzer()
+
+# Quick scan with default watchlist (30+ stocks and crypto)
+scan_results = analyzer.scan_market(period='3mo', top_n=5)
+analyzer.print_market_scan(scan_results)
+
+# Custom watchlist scan
+custom_symbols = ['AAPL', 'MSFT', 'NVDA', 'TSLA', 'BTC-USD', 'ETH-USD']
+custom_scan = analyzer.scan_market(symbols=custom_symbols, period='1mo', top_n=3)
+
+# Access results programmatically
+bullish_df = custom_scan['bullish']
+bearish_df = custom_scan['bearish']
+summary = custom_scan['summary']
+
+print(f"Market Sentiment: {summary['bullish_percentage']}% Bullish")
+print(f"Top Bullish Pick: {bullish_df.iloc[0]['Symbol']}")
 ```
 
 #### Individual Component Usage

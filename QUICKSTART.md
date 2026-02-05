@@ -23,10 +23,16 @@ Analyze assets one at a time interactively:
 python analyze.py
 ```
 
-You'll be prompted to enter:
-- Symbol (e.g., AAPL, BTC-USD)
-- Time period (e.g., 1y, 6mo, 3mo)
-- Asset type (stock or crypto)
+Choose from:
+1. **Analyze individual asset** - Enter symbol, time period, and asset type
+2. **Market Scanner** - Scan multiple assets for top bullish and bearish signals
+3. **Quit**
+
+Market Scanner features:
+- Scans 30+ popular stocks and cryptocurrencies
+- Returns top bullish (BUY) and bearish (SELL) recommendations
+- Customizable time period and number of results
+- Option to use default watchlist or custom symbols
 
 ### 2. Example Script
 
@@ -41,6 +47,8 @@ This demonstrates:
 - Cryptocurrency analysis (BTC)
 - Multiple asset comparison
 - Top buy recommendations
+- **Market Scanner** - Top bullish and bearish recommendations
+- Custom watchlist scanning
 
 ### 3. Test with Sample Data
 
@@ -77,6 +85,15 @@ top_buys = analyzer.get_top_recommendations(
     recommendation_type='BUY'
 )
 print(top_buys)
+
+# Scan market for top bullish and bearish signals
+scan_results = analyzer.scan_market(period='3mo', top_n=5)
+analyzer.print_market_scan(scan_results)
+
+# Scan custom watchlist
+custom_symbols = ['AAPL', 'MSFT', 'NVDA', 'BTC-USD', 'ETH-USD']
+custom_scan = analyzer.scan_market(symbols=custom_symbols, period='1mo', top_n=3)
+analyzer.print_market_scan(custom_scan)
 ```
 
 ## Common Symbols

@@ -254,8 +254,11 @@ def predict_future_price(df, time_horizons=[30, 90]):
         Dictionary with predictions at multiple time horizons
     """
     try:
-        if len(df) < 50:
+        if len(df) < 2:
             return None
+
+        history_len = len(df)
+        limited_history = history_len < 50
         
         # Prepare data
         prices = df['Close'].values
@@ -269,7 +272,8 @@ def predict_future_price(df, time_horizons=[30, 90]):
         
         # Calculate historical statistics
         daily_returns = np.diff(prices) / prices[:-1]
-        volatility_short = np.std(daily_returns[-20:]) * 100 if len(daily_returns) >= 20 else np.std(daily_returns) * 100
+        vol_window = min(20, len(daily_returns)) if len(daily_returns) > 0 else 1
+        volatility_short = np.std(daily_returns[-vol_window:]) * 100 if len(daily_returns) > 0 else 0
         volatility_long = np.std(daily_returns) * 100
         volatility = (volatility_short * 0.6 + volatility_long * 0.4)
         
@@ -281,9 +285,9 @@ def predict_future_price(df, time_horizons=[30, 90]):
         
         # MARKET CONDITION ANALYSIS
         # Detect bull/bear market regime
-        sma_50 = np.mean(prices[-50:]) if len(prices) >= 50 else np.mean(prices)
-        sma_200 = np.mean(prices[-200:]) if len(prices) >= 200 else sma_50
-        current_sma_short = np.mean(prices[-20:])
+        sma_50 = np.mean(prices[-min(50, len(prices)):])
+        sma_200 = np.mean(prices[-min(200, len(prices)):])
+        current_sma_short = np.mean(prices[-min(20, len(prices)):])
         
         market_regime = "BULLISH" if current_price > sma_50 > sma_200 else "BEARISH" if current_price < sma_50 < sma_200 else "NEUTRAL"
         
@@ -293,22 +297,25 @@ def predict_future_price(df, time_horizons=[30, 90]):
         momentum_strength = abs(recent_momentum) / (volatility / 100 + 0.001)  # Momentum relative to volatility
         
         # Trend strength (how consistent is the direction?)
-        recent_returns = daily_returns[-20:] if len(daily_returns) >= 20 else daily_returns
+        recent_window = min(20, len(daily_returns)) if len(daily_returns) > 0 else 1
+        recent_returns = daily_returns[-recent_window:] if len(daily_returns) > 0 else np.array([0])
         positive_days = np.sum(recent_returns > 0)
-        trend_strength = abs(positive_days - 10) / 10  # 0 to 1, where 1 is very strong trend
+        trend_strength = abs(positive_days - (recent_window / 2)) / max(recent_window / 2, 1)
         
         # Price acceleration (is trend getting stronger or weaker?)
-        if len(recent_returns) >= 10:
-            first_half_momentum = np.mean(recent_returns[:10])
-            second_half_momentum = np.mean(recent_returns[10:])
+        if len(recent_returns) >= 6:
+            split = len(recent_returns) // 2
+            first_half_momentum = np.mean(recent_returns[:split])
+            second_half_momentum = np.mean(recent_returns[split:])
             acceleration = second_half_momentum - first_half_momentum
         else:
             acceleration = 0
         
         # SENTIMENT ANALYSIS (based on technical indicators)
         # RSI-like sentiment (position in recent range)
-        recent_range = np.max(prices[-30:]) - np.min(prices[-30:]) if len(prices) >= 30 else np.max(prices) - np.min(prices)
-        sentiment_position = (current_price - np.min(prices[-30:]) if len(prices) >= 30 else current_price - np.min(prices)) / (recent_range + 0.001)
+        range_window = min(30, len(prices))
+        recent_range = np.max(prices[-range_window:]) - np.min(prices[-range_window:])
+        sentiment_position = (current_price - np.min(prices[-range_window:])) / (recent_range + 0.001)
         sentiment_position = np.clip(sentiment_position, 0, 1)
         
         # Oversold/overbought adjustment
@@ -552,7 +559,9 @@ def predict_future_price(df, time_horizons=[30, 90]):
             'volatility_regime': volatility_regime,
             'pattern_analysis': pattern_analysis,
             'patterns_detected': pattern_analysis['patterns'],
-            'darkpool_analysis': darkpool_analysis
+            'darkpool_analysis': darkpool_analysis,
+            'data_quality': 'LIMITED_HISTORY' if limited_history else 'OK',
+            'history_length': history_len
         }
     
     except Exception as e:
@@ -591,8 +600,9 @@ def run_bullish_bearish_scan(symbols, time_horizon, history_period):
         return pd.DataFrame(), pd.DataFrame()
 
     results_df = pd.DataFrame(results)
-    bullish = results_df.sort_values("Expected Return (%)", ascending=False).head(10)
-    bearish = results_df.sort_values("Expected Return (%)", ascending=True).head(10)
+    # Sort by expected return but don't limit results - show all
+    bullish = results_df.sort_values("Expected Return (%)", ascending=False)
+    bearish = results_df.sort_values("Expected Return (%)", ascending=True)
 
     return bullish, bearish
 
@@ -1282,6 +1292,11 @@ def display_analysis(analysis, symbol, period, asset_type):
             prediction_results = predict_future_price(df)
             
             if prediction_results:
+                if prediction_results.get('data_quality') == 'LIMITED_HISTORY':
+                    st.warning(
+                        f"Limited history detected ({prediction_results.get('history_length', 0)} periods). "
+                        "Some metrics may be less reliable for newer or thinly traded stocks."
+                    )
                 current_price = prediction_results['current_price']
                 predictions = prediction_results['predictions']
                 
@@ -1308,87 +1323,89 @@ def display_analysis(analysis, symbol, period, asset_type):
                 
                 # Market conditions summary
                 col1, col2 = st.columns(2)
+                with col1:
+                    st.markdown(f"""
+                    **Market Conditions:**
+                    - **Regime:** {prediction_results['market_regime']} ({prediction_results['sentiment']})
+                    - **Volatility Trend:** {prediction_results['volatility_regime']}
+                    - **Momentum:** {prediction_results['momentum_strength']:.2f}x
+                    - **Daily Drift:** {prediction_results['drift']*100:.4f}%
+                    """)
+                with col2:
+                    st.markdown(f"""
+                    **Technical Assessment:**
+                    - **Trend Strength:** {prediction_results['trend_strength']*100:.1f}% ({"Strong" if prediction_results['trend_strength'] > 0.6 else "Weak" if prediction_results['trend_strength'] < 0.4 else "Moderate"})
+                    - **Price Position:** {prediction_results['sentiment']}
+                    - **Historical Range:** ${prediction_results['price_range'][0]:.2f} - ${prediction_results['price_range'][1]:.2f}
+                    - **Price Mean:** ${prediction_results['price_mean']:.2f}
+                    """)
+                
+                # Candlestick Patterns Detection
+                if prediction_results['patterns_detected']:
+                    st.markdown("### 🕯️ Candlestick Pattern Recognition")
+                    patterns_text = ", ".join(prediction_results['patterns_detected'])
+                    pattern_sentiment = prediction_results['pattern_analysis']['signal']
+                    if pattern_sentiment > 0.5:
+                        st.success(f"**Bullish Patterns Detected:** {patterns_text}")
+                    elif pattern_sentiment < -0.5:
+                        st.error(f"**Bearish Patterns Detected:** {patterns_text}")
+                    else:
+                        st.info(f"**Neutral Patterns Detected:** {patterns_text}")
+                else:
+                    st.info("No candlestick patterns detected in recent candles.")
+                
+                st.divider()
+                
+                # DARKPOOL ANALYSIS DISPLAY
+                if prediction_results['darkpool_analysis']:
+                    st.markdown("### 🌊 Darkpool Activity Analysis")
+                    darkpool = prediction_results['darkpool_analysis']
+                    
+                    col1, col2, col3, col4 = st.columns(4)
+                    with col1:
+                        st.metric("Volume Anomaly", f"{darkpool['volume_anomaly']:.2f}",
+                                "Z-Score", delta_color="inverse")
+                    with col2:
+                        st.metric("Est. Darkpool %", f"{darkpool['estimated_darkpool_pct']:.1f}%",
+                                "of volume")
+                    with col3:
+                        st.metric("Sentiment", darkpool['darkpool_sentiment'],
+                                f"Score: {darkpool['sentiment_score']:.2f}")
+                    with col4:
+                        st.metric("Volume Trend", darkpool['volume_trend'],
+                                f"Avg: {darkpool['average_volume']/1e6:.1f}M")
+                    
+                    # Detailed explanation
+                    col1, col2 = st.columns(2)
                     with col1:
                         st.markdown(f"""
-                        **Market Conditions:**
-                        - **Regime:** {prediction_results['market_regime']} ({prediction_results['sentiment']})
-                        - **Volatility Trend:** {prediction_results['volatility_regime']}
-                        - **Momentum:** {prediction_results['momentum_strength']:.2f}x
-                        - **Daily Drift:** {prediction_results['drift']*100:.4f}%
+                        **What This Means:**
+                        - **Volume Anomaly ({darkpool['volume_anomaly']:.2f}):** Measures deviation from normal volume. Higher = unusual activity
+                        - **Divergence ({darkpool['price_volume_divergence']:.2f}):** Price moving with minimal volume suggests off-exchange trades
+                        - **Accumulation Momentum:** Positive = Smart money buying, Negative = Distribution
                         """)
                     with col2:
                         st.markdown(f"""
-                        **Technical Assessment:**
-                        - **Trend Strength:** {prediction_results['trend_strength']*100:.1f}% ({"Strong" if prediction_results['trend_strength'] > 0.6 else "Weak" if prediction_results['trend_strength'] < 0.4 else "Moderate"})
-                        - **Price Position:** {prediction_results['sentiment']}
-                        - **Historical Range:** ${prediction_results['price_range'][0]:.2f} - ${prediction_results['price_range'][1]:.2f}
-                        - **Price Mean:** ${prediction_results['price_mean']:.2f}
+                        **Institutional Flow Insights:**
+                        - **Est. Darkpool Volume:** {darkpool['estimated_darkpool_pct']:.1f}% (typically 10-20%)
+                        - **Sentiment:** {darkpool['darkpool_sentiment']} (Accumulation = bullish, Distribution = bearish)
+                        - **Large Blocks:** {darkpool['large_blocks_detected']:.1f} blocks/10-day period
+                        - **Current Volume:** {darkpool['recent_volume']/1e6:.1f}M vs Avg {darkpool['average_volume']/1e6:.1f}M
                         """)
                     
-                    # Candlestick Patterns Detection
-                    if prediction_results['patterns_detected']:
-                        st.markdown("### 🕯️ Candlestick Pattern Recognition")
-                        patterns_text = ", ".join(prediction_results['patterns_detected'])
-                        pattern_sentiment = prediction_results['pattern_analysis']['signal']
-                        if pattern_sentiment > 0.5:
-                            st.success(f"**Bullish Patterns Detected:** {patterns_text}")
-                        elif pattern_sentiment < -0.5:
-                            st.error(f"**Bearish Patterns Detected:** {patterns_text}")
-                        else:
-                            st.info(f"**Neutral Patterns Detected:** {patterns_text}")
-                    
-                    st.divider()
-                    
-                    # DARKPOOL ANALYSIS DISPLAY
-                    if prediction_results['darkpool_analysis']:
-                        st.markdown("### 🌊 Darkpool Activity Analysis")
-                        darkpool = prediction_results['darkpool_analysis']
-                        
-                        col1, col2, col3, col4 = st.columns(4)
-                        with col1:
-                            st.metric("Volume Anomaly", f"{darkpool['volume_anomaly']:.2f}",
-                                    "Z-Score", delta_color="inverse")
-                        with col2:
-                            st.metric("Est. Darkpool %", f"{darkpool['estimated_darkpool_pct']:.1f}%",
-                                    "of volume")
-                        with col3:
-                            st.metric("Sentiment", darkpool['darkpool_sentiment'],
-                                    f"Score: {darkpool['sentiment_score']:.2f}")
-                        with col4:
-                            st.metric("Volume Trend", darkpool['volume_trend'],
-                                    f"Avg: {darkpool['average_volume']/1e6:.1f}M")
-                        
-                        # Detailed explanation
-                        col1, col2 = st.columns(2)
-                        with col1:
-                            st.markdown(f"""
-                            **What This Means:**
-                            - **Volume Anomaly ({darkpool['volume_anomaly']:.2f}):** Measures deviation from normal volume. Higher = unusual activity
-                            - **Divergence ({darkpool['price_volume_divergence']:.2f}):** Price moving with minimal volume suggests off-exchange trades
-                            - **Accumulation Momentum:** Positive = Smart money buying, Negative = Distribution
-                            """)
-                        with col2:
-                            st.markdown(f"""
-                            **Institutional Flow Insights:**
-                            - **Est. Darkpool Volume:** {darkpool['estimated_darkpool_pct']:.1f}% (typically 10-20%)
-                            - **Sentiment:** {darkpool['darkpool_sentiment']} (Accumulation = bullish, Distribution = bearish)
-                            - **Large Blocks:** {darkpool['large_blocks_detected']:.1f} blocks/10-day period
-                            - **Current Volume:** {darkpool['recent_volume']/1e6:.1f}M vs Avg {darkpool['average_volume']/1e6:.1f}M
-                            """)
-                        
-                        # Display darkpool chart
-                        st.markdown("**Darkpool Metrics Breakdown:**")
-                        darkpool_chart = create_darkpool_chart(df, darkpool)
-                        if darkpool_chart:
-                            st.plotly_chart(darkpool_chart, use_container_width=True)
-                    
-                    st.divider()
-                    
-                    # Create tabs for different time horizons
-                    tabs = st.tabs([horizon_labels[h] for h in [30, 90]])
-                    
-                    for idx, days in enumerate([30, 90]):
-                        with tabs[idx]:
+                    # Display darkpool chart
+                    st.markdown("**Darkpool Metrics Breakdown:**")
+                    darkpool_chart = create_darkpool_chart(df, darkpool)
+                    if darkpool_chart:
+                        st.plotly_chart(darkpool_chart, use_container_width=True)
+                
+                st.divider()
+                
+                # Create tabs for different time horizons
+                tabs = st.tabs([horizon_labels[h] for h in [30, 90]])
+                
+                for idx, days in enumerate([30, 90]):
+                    with tabs[idx]:
                             pred = predictions[days]
                             
                             # Calculate time period text
@@ -1496,25 +1513,25 @@ def display_analysis(analysis, symbol, period, asset_type):
             'BUY': '🟢',
             'STRONG_BUY': '🟢',
             'SELL': '🔴',
-                'STRONG_SELL': '🔴',
-                'HOLD': '🟡'
-            }
-            
-            icon = pred_colors.get(pred['recommendation'], '⚪')
-            
-            st.markdown(f"## {icon} Recommendation: **{pred['recommendation'].replace('_', ' ')}**")
-            st.caption("Based on technical analysis of historical price patterns, volume trends, and market conditions.")
-            
-            col1, col2 = st.columns(2)
-            with col1:
-                st.metric("Confidence", f"{pred['confidence']:.1f}%", help="Reliability of this recommendation (higher is better)")
-            with col2:
-                st.metric("Risk Level", pred['risk_level'], help="Expected volatility and downside risk")
-            
-            if 'reasoning' in pred:
-                st.markdown("**Key Factors:**")
-                for reason in pred['reasoning']:
-                    st.markdown(f"✓ {reason}")
+            'STRONG_SELL': '🔴',
+            'HOLD': '🟡'
+        }
+        
+        icon = pred_colors.get(pred['recommendation'], '⚪')
+        
+        st.markdown(f"## {icon} Recommendation: **{pred['recommendation'].replace('_', ' ')}**")
+        st.caption("Based on technical analysis of historical price patterns, volume trends, and market conditions.")
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            st.metric("Confidence", f"{pred['confidence']:.1f}%", help="Reliability of this recommendation (higher is better)")
+        with col2:
+            st.metric("Risk Level", pred['risk_level'], help="Expected volatility and downside risk")
+        
+        if 'reasoning' in pred:
+            st.markdown("**Key Factors:**")
+            for reason in pred['reasoning']:
+                st.markdown(f"✓ {reason}")
         
         st.divider()
         
@@ -1628,13 +1645,19 @@ def show_comparison_interface():
                     )
                     
                     if not comparison.empty:
-                        st.success(f"✅ Comparison complete for {len(symbols)} assets!")
+                        analyzed_count = len(comparison)
+                        requested_count = len(symbols)
+                        if analyzed_count == requested_count:
+                            st.success(f"✅ Successfully analyzed all {analyzed_count} assets!")
+                        else:
+                            st.warning(f"⚠️ Analyzed {analyzed_count} out of {requested_count} assets. Some symbols may be invalid or unavailable.")
                         
                         # Display as dataframe
                         st.dataframe(
                             comparison,
                             use_container_width=True,
-                            hide_index=True
+                            hide_index=True,
+                            height=600  # Show more rows at once
                         )
                         
                         # Download button

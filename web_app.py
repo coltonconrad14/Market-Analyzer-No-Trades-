@@ -13,6 +13,8 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import yfinance as yf
 import numpy as np
+from ml_learning_engine import get_ml_engine
+from datetime import datetime
 
 # Page configuration
 st.set_page_config(
@@ -371,35 +373,70 @@ def predict_future_price(df, time_horizons=[30, 90]):
         reversion_rate = base_reversion_rate * (0.5 if trend_strength > 0.6 else 1.0)
         current_deviation = (current_price - price_mean) / price_mean
         
+        # Initialize ML Learning Engine
+        ml_engine = get_ml_engine()
+        
         # Generate predictions for all time horizons
         predictions = {}
         for days_ahead in time_horizons:
             months_ahead = days_ahead / 30
             
-            # ADAPTIVE MODEL WEIGHTS based on time horizon and market conditions
-            if days_ahead <= 90:
-                # Short term: favor momentum and recent trends
-                lr_weight = 0.30
-                poly_weight = 0.35
-                ema_weight = 0.20
-                mean_rev_weight = 0.15
+            # ADAPTIVE MODEL WEIGHTS with ML learning
+            # Get base weights first
+            if days_ahead <= 30:
+                # 30-day: favor recent momentum and trends
+                base_weights = {
+                    "linear": 0.30,
+                    "polynomial": 0.35,
+                    "ema": 0.20,
+                    "mean_reversion": 0.15
+                }
+            elif days_ahead <= 90:
+                # 90-day: balanced approach with emphasis on trend models for better confidence
+                base_weights = {
+                    "linear": 0.28,
+                    "polynomial": 0.32,
+                    "ema": 0.25,
+                    "mean_reversion": 0.15
+                }
             elif days_ahead <= 180:
                 # Medium term: balance between trend and reversion
-                lr_weight = 0.25
-                poly_weight = 0.25
-                ema_weight = 0.20
-                mean_rev_weight = 0.30
+                base_weights = {
+                    "linear": 0.25,
+                    "polynomial": 0.25,
+                    "ema": 0.20,
+                    "mean_reversion": 0.30
+                }
             else:
                 # Long term: more weight on mean reversion and historical patterns
-                lr_weight = 0.15
-                poly_weight = 0.15
-                ema_weight = 0.15
-                mean_rev_weight = 0.55
+                base_weights = {
+                    "linear": 0.15,
+                    "polynomial": 0.15,
+                    "ema": 0.15,
+                    "mean_reversion": 0.55
+                }
+            
+            # Apply ML-learned weights if available
+            ml_weights = ml_engine.get_adaptive_model_weights(days_ahead)
+            
+            # Blend base weights with ML weights (70% base, 30% ML for stability)
+            learning_level = ml_engine.model_performance.get("overall", {}).get("learning_level", "BEGINNER")
+            if learning_level in ["EXPERT", "ADVANCED"]:
+                ml_blend = 0.5  # 50% ML influence for experienced model
+            elif learning_level in ["INTERMEDIATE", "LEARNING"]:
+                ml_blend = 0.3  # 30% ML influence
+            else:
+                ml_blend = 0.0  # No ML influence for beginners
+            
+            lr_weight = base_weights["linear"] * (1 - ml_blend) + ml_weights["linear"] * ml_blend
+            poly_weight = base_weights["polynomial"] * (1 - ml_blend) + ml_weights["polynomial"] * ml_blend
+            ema_weight = base_weights["ema"] * (1 - ml_blend) + ml_weights["ema"] * ml_blend
+            mean_rev_weight = base_weights["mean_reversion"] * (1 - ml_blend) + ml_weights["mean_reversion"] * ml_blend
             
             # TREND-BASED ADJUSTMENT: Boost momentum for strong trends, reduce for choppy markets
             if trend_strength > 0.6:
-                # Strong trend detected - increase momentum models
-                trend_boost = 0.1 * trend_strength
+                # Strong trend detected - increase momentum models confidence
+                trend_boost = 0.12 * trend_strength
                 lr_weight += trend_boost * 0.5
                 poly_weight += trend_boost * 0.5
                 mean_rev_weight -= trend_boost
@@ -424,14 +461,21 @@ def predict_future_price(df, time_horizons=[30, 90]):
             # Model 1: Linear extrapolation
             lr_pred = lr_poly(len(prices) + days_ahead - 1)
             
-            # Model 2: Polynomial with dampening
-            poly_dampening = 1 - (min(days_ahead, 365) / 365) * 0.5
+            # Model 2: Polynomial with adaptive dampening
+            # Less dampening for 90-day to capture trend momentum better
+            if days_ahead <= 90:
+                poly_dampening = 1 - (days_ahead / 365) * 0.35  # Reduced dampening
+            else:
+                poly_dampening = 1 - (min(days_ahead, 365) / 365) * 0.5
             poly_pred = current_price + (poly_func(len(prices) + days_ahead - 1) - current_price) * poly_dampening
             
-            # Model 3: EMA with momentum and acceleration
-            decay_factor = 0.95 ** (days_ahead / 365)
+            # Model 3: EMA with enhanced momentum and acceleration for 90-day
+            if days_ahead <= 90:
+                decay_factor = 0.96 ** (days_ahead / 365)  # Slower decay
+            else:
+                decay_factor = 0.95 ** (days_ahead / 365)
             # Include acceleration for stronger signals
-            acceleration_factor = 1 + (acceleration * 10 * days_ahead / 365)
+            acceleration_factor = 1 + (acceleration * 12 * days_ahead / 365)  # Increased sensitivity
             ema_pred = current_price * (1 + ema_momentum * decay_factor * acceleration_factor)
             
             # Model 4: Mean reversion with regime adjustment
@@ -452,15 +496,32 @@ def predict_future_price(df, time_horizons=[30, 90]):
             
             # CANDLESTICK PATTERN ADJUSTMENT: Apply pattern signal for short-term predictions
             if days_ahead <= 90 and pattern_strength > 0.05:
-                pattern_adjustment = current_price * (pattern_signal * pattern_strength * 0.02)
+                pattern_adjustment = current_price * (pattern_signal * pattern_strength * 0.025)  # Increased impact
                 ensemble_pred += pattern_adjustment
             
-            # Apply bounds with trend consideration
-            expansion_factor = 1 + (min(days_ahead, 1825) / 1825) * 0.15
-            if trend_strength > 0.7:
-                expansion_factor *= 1.2  # Allow more upside for strong trends
+            # Apply bounds with improved trend consideration for 90-day
+            if days_ahead <= 90:
+                # More flexible bounds for 90-day predictions
+                expansion_factor = 1 + (days_ahead / 365) * 0.35
+                if trend_strength > 0.7:
+                    expansion_factor *= 1.3  # Allow more range for strong trends
+                elif trend_strength > 0.5:
+                    expansion_factor *= 1.15
+            else:
+                expansion_factor = 1 + (min(days_ahead, 1825) / 1825) * 0.15
+                if trend_strength > 0.7:
+                    expansion_factor *= 1.2
+            
             upper_bound = price_max + (price_max - price_mean) * expansion_factor
             lower_bound = price_min - (price_mean - price_min) * expansion_factor
+            
+            # For strong trends, allow breaking historical bounds
+            if trend_strength > 0.65 and days_ahead <= 90:
+                trend_extension = current_price * trend_strength * 0.25 * (days_ahead / 90)
+                if drift_short > 0:  # Uptrend
+                    upper_bound = max(upper_bound, current_price + trend_extension)
+                else:  # Downtrend
+                    lower_bound = min(lower_bound, current_price - trend_extension)
             
             ensemble_pred = np.clip(ensemble_pred, lower_bound, upper_bound)
             
@@ -468,45 +529,93 @@ def predict_future_price(df, time_horizons=[30, 90]):
             expected_gain_loss = ensemble_pred - current_price
             expected_gain_loss_pct = (expected_gain_loss / current_price) * 100
             
-            # Confidence with market conditions
+            # Enhanced confidence calculation with better model agreement scoring
             model_std = np.std([lr_pred, poly_pred, ema_pred, mean_rev_pred])
-            model_agreement = max(0.3, 1 - (model_std / current_price))
+            model_agreement = max(0.35, 1 - (model_std / current_price))
             
-            base_confidence = 40 + (model_agreement * 55)
-            time_decay = 1 - (np.log(1 + min(days_ahead, 1825) / 365) / np.log(6)) * 0.4
-            time_decay = max(0.55, time_decay)
+            # Higher base confidence for better predictions
+            base_confidence = 45 + (model_agreement * 50)
             
-            # Boost confidence for strong trends and market regimes
+            # IMPROVED TIME DECAY: Less penalty for 90-day predictions
+            if days_ahead <= 90:
+                # Minimal decay for 30-90 day predictions (sweet spot for technical analysis)
+                time_decay = 1 - (np.log(1 + days_ahead / 365) / np.log(6)) * 0.25
+                time_decay = max(0.75, time_decay)  # Higher floor for short-term
+            else:
+                time_decay = 1 - (np.log(1 + min(days_ahead, 1825) / 365) / np.log(6)) * 0.4
+                time_decay = max(0.60, time_decay)
+            
+            # ENHANCED CONDITION BOOST: More factors for confidence
             condition_boost = 1.0
-            if trend_strength > 0.6:
-                condition_boost += 0.1
+            
+            # Strong trend boost (bigger impact)
+            if trend_strength > 0.7:
+                condition_boost += 0.18
+            elif trend_strength > 0.6:
+                condition_boost += 0.12
+            elif trend_strength > 0.5:
+                condition_boost += 0.08
+            
+            # Market regime consistency boost
             if market_regime != "NEUTRAL":
-                condition_boost += 0.05
+                condition_boost += 0.08
+                # Extra boost if regime aligns with price momentum
+                if (market_regime == "BULLISH" and drift_short > 0) or (market_regime == "BEARISH" and drift_short < 0):
+                    condition_boost += 0.07
+            
+            # Volatility regime boost
             if volatility_regime == "CONTRACTING":
+                condition_boost += 0.07
+            
+            # Pattern strength boost for predictions
+            if pattern_strength > 0.3:
+                condition_boost += 0.06 * pattern_strength
+            
+            # Data quality boost (sufficient history increases confidence)
+            if not limited_history:
                 condition_boost += 0.05
             
-            vol_adjustment = max(0.70, 1 - (volatility / 100) * 0.3)
-            fit_quality = (lr_score + poly_score) / 2
-            fit_bonus = 1 + (fit_quality * 0.15)
+            # Momentum alignment boost
+            if abs(momentum_strength) > 0.5:
+                condition_boost += 0.05
             
+            # Volatility adjustment (lower volatility = higher confidence)
+            vol_adjustment = max(0.75, 1 - (volatility / 100) * 0.25)
+            
+            # Fit quality with enhanced impact
+            fit_quality = (lr_score + poly_score) / 2
+            fit_bonus = 1 + (fit_quality * 0.20)  # Increased from 0.15
+            
+            # Calculate final confidence with improved weighting
             confidence = (
-                base_confidence * 0.5 +
-                (model_agreement * 100) * 0.25 +
+                base_confidence * 0.45 +
+                (model_agreement * 100) * 0.30 +  # Increased weight
                 (time_decay * 100) * 0.15 +
                 (vol_adjustment * 100) * 0.10
             ) * fit_bonus * condition_boost
             
-            confidence = max(30, min(95, confidence))
+            # Wider confidence range with higher ceiling for strong predictions
+            confidence = max(35, min(96, confidence))
             
-            # Risk assessment
-            volatility_adjusted = volatility * (1 + np.log(1 + days_ahead / 30) * 0.15)
+            # Apply ML-based confidence adjustment
+            ml_adjusted_confidence, ml_reason = ml_engine.get_confidence_adjustment(confidence, days_ahead)
+            confidence = ml_adjusted_confidence
+            
+            # Improved risk assessment aligned with confidence
+            volatility_adjusted = volatility * (1 + np.log(1 + days_ahead / 30) * 0.12)  # Reduced penalty
             movement_risk = abs(expected_gain_loss_pct) / 100
-            total_risk = volatility_adjusted * 0.6 + movement_risk * 40
+            trend_risk_adjustment = 1 - (trend_strength * 0.3)  # Strong trends reduce risk
+            total_risk = (volatility_adjusted * 0.55 + movement_risk * 45) * trend_risk_adjustment
             
-            if total_risk > 8:
+            # More nuanced risk levels aligned with confidence
+            if total_risk > 10:
                 risk_level = "HIGH"
-            elif total_risk > 4:
+            elif total_risk > 6:
+                risk_level = "MEDIUM-HIGH" 
+            elif total_risk > 3.5:
                 risk_level = "MEDIUM"
+            elif total_risk > 2:
+                risk_level = "MEDIUM-LOW"
             else:
                 risk_level = "LOW"
             
@@ -541,8 +650,13 @@ def predict_future_price(df, time_horizons=[30, 90]):
                 'bounds': {
                     'upper': upper_bound,
                     'lower': lower_bound
-                }
+                },
+                'ml_adjusted': ml_blend > 0,
+                'ml_reason': ml_reason if ml_blend > 0 else None
             }
+        
+        # Get ML learning statistics
+        ml_stats = ml_engine.get_learning_stats()
         
         return {
             'current_price': current_price,
@@ -561,7 +675,8 @@ def predict_future_price(df, time_horizons=[30, 90]):
             'patterns_detected': pattern_analysis['patterns'],
             'darkpool_analysis': darkpool_analysis,
             'data_quality': 'LIMITED_HISTORY' if limited_history else 'OK',
-            'history_length': history_len
+            'history_length': history_len,
+            'ml_learning': ml_stats
         }
     
     except Exception as e:
@@ -815,11 +930,70 @@ def main():
         
         st.divider()
         
+        # ML Learning Section
+        with st.expander("🤖 ML Learning Status", expanded=False):
+            ml_engine = get_ml_engine()
+            ml_stats = ml_engine.get_learning_stats()
+            
+            learning_level = ml_stats['learning_level']
+            total = ml_stats['total_predictions']
+            validated = ml_stats['validated_predictions']
+            
+            level_info = {
+                'BEGINNER': ('🟡', 'Just starting'),
+                'LEARNING': ('🟢', 'Building knowledge'),
+                'INTERMEDIATE': ('🟢', 'Good progress'),
+                'ADVANCED': ('🔵', 'Well trained'),
+                'EXPERT': ('🟣', 'Highly accurate')
+            }
+            
+            emoji, desc = level_info.get(learning_level, ('⚪', 'Unknown'))
+            
+            st.markdown(f"**{emoji} Level: {learning_level}**")
+            st.caption(f"{desc} • {validated} validated predictions")
+            
+            if total > 0:
+                st.progress(min(validated / 100, 1.0), text=f"{validated}/100 for Expert")
+            
+            if validated > 0:
+                st.markdown("**Performance:**")
+                for tf, perf in ml_stats.get('timeframe_performance', {}).items():
+                    if perf['predictions_count'] > 0:
+                        accuracy = 100 - perf['avg_error_pct']
+                        st.write(f"  • {tf}-day: {accuracy:.1f}% accuracy")
+            
+            st.caption(
+                "💡 Record predictions to build ML learning data. "
+                "The system improves over time!"
+            )
+            
+            # Optional: Add manual outcome update
+            st.markdown("---")
+            st.markdown("**Manual Update (Optional):**")
+            update_symbol = st.text_input("Symbol", key="ml_update_symbol", placeholder="e.g., AAPL")
+            update_price = st.number_input("Current Price", min_value=0.01, step=0.01, key="ml_update_price")
+            
+            if st.button("Update Outcomes", key="ml_update_btn", use_container_width=True):
+                if update_symbol and update_price > 0:
+                    updated = ml_engine.update_with_actual_outcome(
+                        update_symbol,
+                        datetime.now().isoformat(),
+                        update_price
+                    )
+                    if updated:
+                        st.success("✅ Outcomes updated!")
+                    else:
+                        st.info("No predictions to update for this symbol/date")
+                else:
+                    st.error("Please enter symbol and price")
+        
+        st.divider()
+        
         # Analyze button
-        analyze_clicked = st.button("🔍 Analyze Asset", type="primary", use_container_width=True)
+        analyze_clicked = st.button("🔍 Analyze Asset", type="primary", use_container_width=True, key="analyze_asset_btn")
         
         # Clear history button
-        if st.button("🗑️ Clear History", use_container_width=True):
+        if st.button("🗑️ Clear History", use_container_width=True, key="clear_history_btn"):
             st.session_state.analysis_history = []
             st.success("History cleared!")
     
@@ -1297,6 +1471,70 @@ def display_analysis(analysis, symbol, period, asset_type):
                         f"Limited history detected ({prediction_results.get('history_length', 0)} periods). "
                         "Some metrics may be less reliable for newer or thinly traded stocks."
                     )
+                
+                # Display ML Learning Status
+                ml_learning = prediction_results.get('ml_learning', {})
+                if ml_learning:
+                    learning_level = ml_learning.get('learning_level', 'BEGINNER')
+                    total_preds = ml_learning.get('total_predictions', 0)
+                    validated_preds = ml_learning.get('validated_predictions', 0)
+                    
+                    level_colors = {
+                        'BEGINNER': '🟡',
+                        'LEARNING': '🟢',
+                        'INTERMEDIATE': '🟢',
+                        'ADVANCED': '🔵',
+                        'EXPERT': '🟣'
+                    }
+                    level_emoji = level_colors.get(learning_level, '⚪')
+                    
+                    if learning_level != 'BEGINNER' or validated_preds > 0:
+                        with st.expander(f"{level_emoji} ML Learning Status: {learning_level} - {validated_preds} validated predictions", expanded=False):
+                            st.markdown(f"""
+                            **Machine Learning Enhancement Active**
+                            - **Learning Level:** {learning_level}
+                            - **Total Predictions Tracked:** {total_preds}
+                            - **Validated Outcomes:** {validated_preds}
+                            - **Confidence Adjustment:** {'Active' if learning_level in ['ADVANCED', 'EXPERT', 'INTERMEDIATE', 'LEARNING'] else 'Building data'}
+                            """)
+                            
+                            # Show timeframe performance if available
+                            tf_perf = ml_learning.get('timeframe_performance', {})
+                            if tf_perf:
+                                st.markdown("**📊 Historical Accuracy by Timeframe:**")
+                                perf_data = []
+                                for tf, stats in tf_perf.items():
+                                    perf_data.append({
+                                        "Timeframe": f"{tf} days",
+                                        "Predictions": stats['predictions_count'],
+                                        "Avg Error": f"{stats['avg_error_pct']:.1f}%",
+                                        "Direction Accuracy": f"{stats['direction_accuracy']:.1f}%",
+                                        "Avg Confidence": f"{stats['avg_confidence']:.1f}%"
+                                    })
+                                if perf_data:
+                                    st.dataframe(pd.DataFrame(perf_data), use_container_width=True)
+                            
+                            # Show model performance if available
+                            model_perf = ml_learning.get('model_performance', {})
+                            if model_perf:
+                                st.markdown("**🎯 Model Performance (Adaptive Weights):**")
+                                model_data = []
+                                for model, stats in model_perf.items():
+                                    model_data.append({
+                                        "Model": model.title(),
+                                        "Predictions": stats['predictions_count'],
+                                        "Avg Error": f"{stats['avg_error_pct']:.1f}%",
+                                        "RMSE": f"{stats['rmse']:.2f}"
+                                    })
+                                if model_data:
+                                    st.dataframe(pd.DataFrame(model_data), use_container_width=True)
+                                    st.caption("System automatically adjusts model weights based on historical accuracy")
+                            
+                            if ml_learning.get('improvement_suggestions'):
+                                st.markdown("**💡 Suggestions:**")
+                                for suggestion in ml_learning['improvement_suggestions']:
+                                    st.write(f"- {suggestion}")
+                
                 current_price = prediction_results['current_price']
                 predictions = prediction_results['predictions']
                 
@@ -1480,27 +1718,45 @@ def display_analysis(analysis, symbol, period, asset_type):
                                 st.warning(f"🟠 **Bearish**: Expected decline of {abs(pred['expected_gain_loss_pct']):.2f}%")
                             else:
                                 st.error(f"🔴 **Strong Bearish Signal**: Expected downside of {abs(pred['expected_gain_loss_pct']):.2f}%")
-                    
-                    st.divider()
-                    
-                    # Comparison table
-                    st.markdown("### 📋 Prediction Comparison Across Time Horizons")
-                    
-                    comparison_data = []
-                    for days in [30, 90]:
-                        pred = predictions[days]
-                        time_label = {30: "1 Month", 90: "3 Months"}[days]
-                        comparison_data.append({
-                            "Time Horizon": time_label,
-                            "Predicted Price": f"${pred['predicted_price']:.2f}",
-                            "Expected Return": f"{pred['expected_gain_loss_pct']:.2f}%",
-                            "Direction": pred['direction'],
-                            "Confidence": f"{pred['confidence']:.1f}%",
-                            "Risk Level": pred['risk_level']
-                        })
-                    
-                    comparison_df = pd.DataFrame(comparison_data)
-                    st.dataframe(comparison_df, use_container_width=True)
+                
+                st.divider()
+                
+                # Comparison table (outside the loop to show only once)
+                st.markdown("### 📋 Prediction Comparison Across Time Horizons")
+                
+                comparison_data = []
+                for days in [30, 90]:
+                    pred = predictions[days]
+                    time_label = {30: "1 Month", 90: "3 Months"}[days]
+                    comparison_data.append({
+                        "Time Horizon": time_label,
+                        "Predicted Price": f"${pred['predicted_price']:.2f}",
+                        "Expected Return": f"{pred['expected_gain_loss_pct']:.2f}%",
+                        "Direction": pred['direction'],
+                        "Confidence": f"{pred['confidence']:.1f}%",
+                        "Risk Level": pred['risk_level']
+                    })
+                
+                comparison_df = pd.DataFrame(comparison_data)
+                st.dataframe(comparison_df, use_container_width=True)
+                
+                # ML: Record Prediction button
+                st.markdown("---")
+                col1, col2, col3 = st.columns([2, 1, 2])
+                with col2:
+                    # Create unique key using symbol, period, and current timestamp hash
+                    import time
+                    unique_id = hash(f"{symbol}_{period}_{time.time()}")
+                    if st.button("💾 Record Prediction for ML Learning", type="primary", use_container_width=True, key=f"record_pred_{unique_id}"):
+                        ml_engine = get_ml_engine()
+                        record = ml_engine.record_prediction(
+                            symbol=symbol,
+                            prediction_data=predictions,
+                            current_price=current_price,
+                            prediction_date=datetime.now().isoformat()
+                        )
+                        st.success(f"✅ Prediction recorded! The system will learn from this prediction as time passes.")
+                        st.info(f"💡 Come back in 30 or 90 days to see how accurate this prediction was. The ML engine will automatically improve confidence scoring based on results.")
     
     st.divider()
     
@@ -1629,7 +1885,7 @@ def show_comparison_interface():
     
     with col2:
         # Compare button
-        compare_clicked = st.button("Run Comparison", type="primary", use_container_width=True)
+        compare_clicked = st.button("Run Comparison", type="primary", use_container_width=True, key="run_comparison_btn")
     
     if compare_clicked:
         symbols = [s.strip().upper() for s in symbols_input.split('\n') if s.strip()]

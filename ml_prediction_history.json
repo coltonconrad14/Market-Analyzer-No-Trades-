@@ -1,0 +1,334 @@
+{
+  "predictions": [
+    {
+      "symbol": "BTC-USD",
+      "prediction_date": "2026-02-05T18:20:18.387970",
+      "current_price": 65900.328125,
+      "timeframes": {
+        "30": {
+          "predicted_price": 78223.7709011106,
+          "expected_return_pct": 18.700123545265892,
+          "confidence": 96,
+          "direction": "\ud83d\udcc8 BULLISH",
+          "target_date": "2026-03-07T18:20:18.387970",
+          "models": {
+            "linear": 75757.30392357422,
+            "polynomial": 94207.9980917961,
+            "ema": 62136.60603900059,
+            "mean_reversion": 67714.65943028254,
+            "bounded": 78223.7709011106
+          },
+          "actual_price": null,
+          "actual_return_pct": null,
+          "error_pct": null
+        },
+        "90": {
+          "predicted_price": 91015.74157422456,
+          "expected_return_pct": 38.11121152778716,
+          "confidence": 96,
+          "direction": "\ud83d\udcc8 BULLISH",
+          "target_date": "2026-05-06T18:20:18.387970",
+          "models": {
+            "linear": 62888.12459766258,
+            "polynomial": 146348.4903283083,
+            "ema": 62315.72498969227,
+            "mean_reversion": 71082.17960739373,
+            "bounded": 91015.74157422456
+          },
+          "actual_price": null,
+          "actual_return_pct": null,
+          "error_pct": null
+        }
+      },
+      "validated": false
+    },
+    {
+      "symbol": "XRP-USD",
+      "prediction_date": "2026-02-05T18:22:02.997859",
+      "current_price": 1.2364813089370728,
+      "timeframes": {
+        "30": {
+          "predicted_price": 1.5275658143623427,
+          "expected_return_pct": 23.541359122969478,
+          "confidence": 96,
+          "direction": "\ud83d\udcc8 BULLISH",
+          "target_date": "2026-03-07T18:22:02.997859",
+          "models": {
+            "linear": 1.420721670825371,
+            "polynomial": 1.9337702040081908,
+            "ema": 1.1385357875751698,
+            "mean_reversion": 1.2963568010344773,
+            "bounded": 1.5275658143623427
+          },
+          "actual_price": null,
+          "actual_return_pct": null,
+          "error_pct": null
+        },
+        "90": {
+          "predicted_price": 1.669280298696244,
+          "expected_return_pct": 35.00246923515748,
+          "confidence": 96,
+          "direction": "\ud83d\udcc8 BULLISH",
+          "target_date": "2026-05-06T18:22:02.997859",
+          "models": {
+            "linear": 0.928022246140535,
+            "polynomial": 2.8236078278527645,
+            "ema": 1.1456953447831253,
+            "mean_reversion": 1.4074897165970368,
+            "bounded": 1.669280298696244
+          },
+          "actual_price": null,
+          "actual_return_pct": null,
+          "error_pct": null
+        }
+      },
+      "validated": false
+    },
+    {
+      "symbol": "AAPL",
+      "prediction_date": "2025-12-25T18:23:33.526888",
+      "current_price": 150.0,
+      "timeframes": {
+        "30": {
+          "predicted_price": 157.5,
+          "expected_return_pct": 5.0,
+          "confidence": 85.72753929818856,
+          "direction": "\ud83d\udcc8 BULLISH",
+          "target_date": "2026-01-24T18:23:33.526888",
+          "models": {
+            "linear": 154.35,
+            "polynomial": 159.075,
+            "ema": 155.925,
+            "mean_reversion": 160.65
+          },
+          "actual_price": 146.8137901422129,
+          "actual_return_pct": -2.124139905191403,
+          "error_pct": 7.278750754568616,
+          "direction_correct": false
+        },
+        "90": {
+          "predicted_price": 142.5,
+          "expected_return_pct": -5.0,
+          "confidence": 79.14073377755044,
+          "direction": "\ud83d\udcc9 BEARISH",
+          "target_date": "2026-03-25T18:23:33.526888",
+          "models": {
+            "linear": 139.65,
+            "polynomial": 143.925,
+            "ema": 141.075,
+            "mean_reversion": 145.35
+          },
+          "actual_price": null,
+          "actual_return_pct": null,
+          "error_pct": null
+        }
+      },
+      "validated": false
+    },
+    {
+      "symbol": "TSLA",
+      "prediction_date": "2026-01-08T18:23:33.527906",
+      "current_price": 200.0,
+      "timeframes": {
+        "30": {
+          "predicted_price": 210.0,
+          "expected_return_pct": 5.0,
+          "confidence": 80.69406772667554,
+          "direction": "\ud83d\udcc8 BULLISH",
+          "target_date": "2026-02-07T18:23:33.527906",
+          "models": {
+            "linear": 205.79999999999998,
+            "polynomial": 212.1,
+            "ema": 207.9,
+            "mean_reversion": 214.20000000000002
+          },
+          "actual_price": null,
+          "actual_return_pct": null,
+          "error_pct": null
+        },
+        "90": {
+          "predicted_price": 190.0,
+          "expected_return_pct": -5.0,
+          "confidence": 89.56201329332785,
+          "direction": "\ud83d\udcc9 BEARISH",
+          "target_date": "2026-04-08T18:23:33.527906",
+          "models": {
+            "linear": 186.2,
+            "polynomial": 191.9,
+            "ema": 188.1,
+            "mean_reversion": 193.8
+          },
+          "actual_price": null,
+          "actual_return_pct": null,
+          "error_pct": null
+        }
+      },
+      "validated": false
+    },
+    {
+      "symbol": "BTC-USD",
+      "prediction_date": "2026-01-18T18:23:33.528799",
+      "current_price": 45000.0,
+      "timeframes": {
+        "30": {
+          "predicted_price": 43650.0,
+          "expected_return_pct": -3.0,
+          "confidence": 86.6976728273866,
+          "direction": "\ud83d\udcc9 BEARISH",
+          "target_date": "2026-02-17T18:23:33.528799",
+          "models": {
+            "linear": 42777.0,
+            "polynomial": 44086.5,
+            "ema": 43213.5,
+            "mean_reversion": 44523.0
+          },
+          "actual_price": null,
+          "actual_return_pct": null,
+          "error_pct": null
+        },
+        "90": {
+          "predicted_price": 47250.0,
+          "expected_return_pct": 5.0,
+          "confidence": 89.07710121853434,
+          "direction": "\ud83d\udcc8 BULLISH",
+          "target_date": "2026-04-18T18:23:33.528799",
+          "models": {
+            "linear": 46305.0,
+            "polynomial": 47722.5,
+            "ema": 46777.5,
+            "mean_reversion": 48195.0
+          },
+          "actual_price": null,
+          "actual_return_pct": null,
+          "error_pct": null
+        }
+      },
+      "validated": false
+    },
+    {
+      "symbol": "MSFT",
+      "prediction_date": "2026-01-12T18:23:33.529776",
+      "current_price": 380.0,
+      "timeframes": {
+        "30": {
+          "predicted_price": 361.0,
+          "expected_return_pct": -5.0,
+          "confidence": 89.44384492588321,
+          "direction": "\ud83d\udcc9 BEARISH",
+          "target_date": "2026-02-11T18:23:33.529776",
+          "models": {
+            "linear": 353.78,
+            "polynomial": 364.61,
+            "ema": 357.39,
+            "mean_reversion": 368.22
+          },
+          "actual_price": null,
+          "actual_return_pct": null,
+          "error_pct": null
+        },
+        "90": {
+          "predicted_price": 368.59999999999997,
+          "expected_return_pct": -3.000000000000009,
+          "confidence": 88.2481125870905,
+          "direction": "\ud83d\udcc9 BEARISH",
+          "target_date": "2026-04-12T18:23:33.529776",
+          "models": {
+            "linear": 361.22799999999995,
+            "polynomial": 372.28599999999994,
+            "ema": 364.914,
+            "mean_reversion": 375.972
+          },
+          "actual_price": null,
+          "actual_return_pct": null,
+          "error_pct": null
+        }
+      },
+      "validated": false
+    },
+    {
+      "symbol": "NVDA",
+      "prediction_date": "2025-12-09T18:23:33.530757",
+      "current_price": 500.0,
+      "timeframes": {
+        "30": {
+          "predicted_price": 485.0,
+          "expected_return_pct": -3.0,
+          "confidence": 76.73817929207479,
+          "direction": "\ud83d\udcc9 BEARISH",
+          "target_date": "2026-01-08T18:23:33.530757",
+          "models": {
+            "linear": 475.3,
+            "polynomial": 489.85,
+            "ema": 480.15,
+            "mean_reversion": 494.7
+          },
+          "actual_price": null,
+          "actual_return_pct": null,
+          "error_pct": null
+        },
+        "90": {
+          "predicted_price": 475.0,
+          "expected_return_pct": -5.0,
+          "confidence": 78.79480159273287,
+          "direction": "\ud83d\udcc9 BEARISH",
+          "target_date": "2026-03-09T18:23:33.530757",
+          "models": {
+            "linear": 465.5,
+            "polynomial": 479.75,
+            "ema": 470.25,
+            "mean_reversion": 484.5
+          },
+          "actual_price": null,
+          "actual_return_pct": null,
+          "error_pct": null
+        }
+      },
+      "validated": false
+    },
+    {
+      "symbol": "NVDA",
+      "prediction_date": "2026-02-05T18:27:36.375122",
+      "current_price": 174.36000061035156,
+      "timeframes": {
+        "30": {
+          "predicted_price": 170.18963067964472,
+          "expected_return_pct": -2.391815735322526,
+          "confidence": 96,
+          "direction": "\ud83d\udcc9 BEARISH",
+          "target_date": "2026-03-07T18:27:36.375122",
+          "models": {
+            "linear": 214.96423090358797,
+            "polynomial": 128.6093355122643,
+            "ema": 173.15894168973216,
+            "mean_reversion": 173.70203760886267,
+            "bounded": 170.18963067964472
+          },
+          "actual_price": null,
+          "actual_return_pct": null,
+          "error_pct": null
+        },
+        "90": {
+          "predicted_price": 129.05256323327268,
+          "expected_return_pct": -25.984994963569086,
+          "confidence": 89.03805834752858,
+          "direction": "\ud83d\udcc9 BEARISH",
+          "target_date": "2026-05-06T18:27:36.375122",
+          "models": {
+            "linear": 236.70696723163306,
+            "polynomial": -19.973016879114198,
+            "ema": 173.17542266001792,
+            "mean_reversion": 172.4808142981832,
+            "bounded": 129.05256323327268
+          },
+          "actual_price": null,
+          "actual_return_pct": null,
+          "error_pct": null
+        }
+      },
+      "validated": false
+    }
+  ],
+  "metadata": {
+    "version": "1.0"
+  }
+}
